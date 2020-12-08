@@ -1,6 +1,6 @@
 import os
 
-import data_generator
+import dataGenerator
 
 def prepare_all_data(raw_data_root,intermedia_data_root):
 	'''Get intermedia data(unorganized)
@@ -22,7 +22,7 @@ def prepare_all_data(raw_data_root,intermedia_data_root):
 						series_dir = os.path.join(study_dir,series_dir_name)
 						if os.path.isdir(series_dir) and is_CT_dir(series_dir):
 							print("CT Dir:",series_dir)
-							data_generator.gen_roi_images(series_dir, intermedia_data_root)
+							dataGenerator.gen_roi_images(series_dir, intermedia_data_root)
 
 
 def is_CT_dir(case_path):
@@ -36,8 +36,8 @@ def is_CT_dir(case_path):
 			return True
 	return False
 
-'''
-raw_data_root = r"F:\LIDC-IDRI"
-intermedia_data_root = r"F:\RData\Nodules"
+if __name__ == '__main__':
+	raw_data_root = r"D:\cancer\gan\lung\LIDC_dataset\LIDC-IDRI"
+	intermedia_data_root = r"D:\cancer\gan\lung"
 
-prepare_all_data(raw_data_root, intermedia_data_root)
+	prepare_all_data(raw_data_root, intermedia_data_root)
