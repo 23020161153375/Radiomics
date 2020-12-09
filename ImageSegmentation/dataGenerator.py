@@ -70,12 +70,14 @@ def gen_roi_images(case_path,output_path):
 
 						#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
 						noduleID = ''.join(noduleID.split())
-						np.save(os.path.join(roi_image_dir,"0."+noduleID+"."+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".npy"),roi_image_array)
-						cv2.imwrite(os.path.join(roi_image_dir,"0."+noduleID+"."+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".jpg"),roi_image_array)
+						np.save(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".npy"),roi_image_array)
+						np.save(os.path.join(roi_image_dir, noduleID + "_" + str(sliceIndex) + "_T" + str(
+							nodule_type.childNodes[0].data) + "_whole.npy"), image_array)
+						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".jpg"),roi_image_array)
 						saved_CT= image_array[0]
-						cv2.imwrite(os.path.join(roi_image_dir,"0."+noduleID+"."+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_complete.jpg"),saved_CT)
+						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_complete.jpg"),saved_CT)
 						erasd_CT= image_erased[0]
-						cv2.imwrite(os.path.join(roi_image_dir,"0."+noduleID+"."+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_erased.jpg"),erasd_CT)
+						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_erased.jpg"),erasd_CT)
 
 						#Simultaneously find and save non-noudule images
 						plain_image_dir = os.path.join(output_path,"plain",SeriesInstanceUid)

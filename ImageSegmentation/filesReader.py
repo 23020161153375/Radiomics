@@ -90,7 +90,7 @@ if __name__ == '__main__':
 	'''
 	#
 	# # #
-	image_array_path = r"D:/cancer/gan/lung/roi/1.3.6.1.4.1.14519.5.2.1.6279.6001.129007566048223160327836686225/"
+	image_array_path = r"D:/cancer/gan/lung/roi/1.3.6.1.4.1.14519.5.2.1.6279.6001.129007566048223160327836686225"
 	show_image(image_array_path)
 
 
