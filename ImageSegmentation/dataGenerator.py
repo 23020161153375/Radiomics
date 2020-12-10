@@ -70,7 +70,7 @@ def gen_roi_images(case_path,output_path):
 
 						#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
 						noduleID = ''.join(noduleID.split())
-						np.save(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".npy"),roi_image_array)
+						# np.save(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".npy"),roi_image_array)
 						np.save(os.path.join(roi_image_dir, noduleID + "_" + str(sliceIndex) + "_T" + str(
 							nodule_type.childNodes[0].data) + "_whole.npy"), image_array)
 						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".jpg"),roi_image_array)
