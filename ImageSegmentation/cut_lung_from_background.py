@@ -8,7 +8,7 @@ def del_small_area_from_mask(mask):
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8, ltype=None)
     del_label_list = []
     for i in range(num_labels):
-        if stats[i][4] < 2000:
+        if stats[i][4] < 3000:
             del_label_list.append(i)
     mask_Connected = np.ones(mask.shape, dtype='uint8')
     for i in del_label_list:
@@ -30,13 +30,13 @@ def lung_mask_HU(image,plot=True):
     # mask[image < -900] = 0
 
     mask = morphology.erosion(mask, np.ones([4, 4]))
-    mask = morphology.dilation(mask, np.ones([8, 8]))  # one last dilation
+    mask = morphology.dilation(mask, np.ones([4, 4]))  # one last dilation
     deled_mask = del_small_area_from_mask(mask)
 
 
 
     mask_convert = cv2.bitwise_not(deled_mask)-254
-    mask_convert = morphology.dilation(mask_convert, np.ones([8, 8]))  # one last dilation
+    # mask_convert = morphology.dilation(mask_convert, np.ones([8, 8]))  # one last dilation
     mask_final = del_small_area_from_mask(mask_convert)
 
     output = image * mask_final

@@ -6,7 +6,8 @@ import numpy as np
 import random
 import cv2
 import filesReader
-
+import body_mask
+import cut_lung_from_background
 
 def gen_roi_images(case_path,output_path):
 	'''Generate a series of roi images saved as npy files 
@@ -60,34 +61,39 @@ def gen_roi_images(case_path,output_path):
 						#search_start = sliceIndex + 1
 
 						image_array = images_data[sliceIndex][0]
-						roi_image_array,image_erased = roi_region_cut(roi, image_array)
-
+						image_array_origion =image_array.copy()
+						# cut lung from background
+						print("input shape",image_array.shape)
+						body = body_mask.apply_body_mask_and_bound(image_array, apply_bound=False)
+						image_array = cut_lung_from_background.lung_mask_HU(body,plot=False)
+						print("output shape", image_array.shape)
+						roi_image_array,image_erased,character_list = roi_region_cut(roi, image_array)
+						character_list.append(nodule_type.childNodes[0].data)
 						#Save roi image array
-						roi_image_dir = os.path.join(output_path,"roi",SeriesInstanceUid)
-						if not os.path.exists(roi_image_dir):
+						complete_image_dir = os.path.join(output_path,"lung_data\\complete")
+						if not os.path.exists(complete_image_dir):
 							#os.mkdir(roi_image_dir)
-							os.makedirs(roi_image_dir)
+							os.makedirs(complete_image_dir)
+						erased_image_dir = os.path.join(output_path, "lung_data\\erased")
+						if not os.path.exists(erased_image_dir):
+							# os.mkdir(roi_image_dir)
+							os.makedirs(erased_image_dir)
 
 						#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
 						noduleID = ''.join(noduleID.split())
-						# np.save(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".npy"),roi_image_array)
-						np.save(os.path.join(roi_image_dir, noduleID + "_" + str(sliceIndex) + "_T" + str(
-							nodule_type.childNodes[0].data) + "_whole.npy"), image_array)
-						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+".jpg"),roi_image_array)
-						saved_CT= image_array[0]
-						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_complete.jpg"),saved_CT)
-						erasd_CT= image_erased[0]
-						cv2.imwrite(os.path.join(roi_image_dir,noduleID+"_"+str(sliceIndex)+"_T"+str(nodule_type.childNodes[0].data)+"_erased.jpg"),erasd_CT)
+						save_name_complete = complete_image_dir+'\\'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+							nodule_type.childNodes[0].data)
+						save_name_erased = erased_image_dir+'\\'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+							nodule_type.childNodes[0].data)
+						np.save(save_name_complete+ "_whole.npy", image_array_origion)
+						np.save(save_name_complete + "_cut.npy", image_array)
+						saved_CT= image_array
+						cv2.imwrite(save_name_complete+"_cut.jpg",saved_CT*255)
+						np.save(save_name_erased + "_erased.npy", image_erased)
+						erasd_CT= image_erased
+						cv2.imwrite(save_name_erased+"_erased.jpg",erasd_CT*255)
+						return save_name_complete,save_name_erased,character_list
 
-						#Simultaneously find and save non-noudule images
-						plain_image_dir = os.path.join(output_path,"plain",SeriesInstanceUid)
-						if not os.path.exists(plain_image_dir):
-							#os.mkdir(plain_image_dir)
-							os.makedirs(plain_image_dir)
-
-						plain_image_path = os.path.join(plain_image_dir,"0."+noduleID+"."+str(sliceIndex)+".npy")
-
-						gen_plain_images(image_array, plain_image_path,2)
 		except:
 			return
 
@@ -153,7 +159,7 @@ def roi_region_cut(roi, image_array):
 	shape = image_array.shape
 	xMin, yMin, height, width = rect_region_locate(roi)
 	print("LOCATE ROI-IMAGE: X={}, Y={}, HEIGHT={},WIDTH={}".format(xMin, yMin, height, width))
-
+	roi_list = [xMin, yMin, height, width]
 	# Whatever the noudule 's size is > 3mm or not
 	yCenter = (yMin * 2 + width) // 2
 	xCenter = (xMin * 2 + height) // 2
@@ -163,10 +169,10 @@ def roi_region_cut(roi, image_array):
 	if valid:
 		print("GENERATE ROI-IMAGE: Y1={}, Y2={}, X1={},X2={}".format(y1, y2, x1, x2))
 		# "+1" for slicing
-		img_roi = image_array[0, y1:y2 + 1, x1:x2 + 1]
+		img_roi = image_array[y1:y2 + 1, x1:x2 + 1]
 		img_copy = image_array.copy()
-		img_copy[0, y1:y2 + 1, x1:x2 + 1]=0
-		return img_roi,img_copy
+		img_copy[y1:y2 + 1, x1:x2 + 1]=-500
+		return img_roi,img_copy,roi_list
 	else:
 		return None
 
@@ -211,11 +217,11 @@ def boundary_check(xCenter,yCenter,shape):
 	if yCenter - DNN_INPUT_SIDE_LEN // 2 + 1 < 0:
 		#Use "//" rather than "/" for floor division
 		return False,None,None,None,None
-	elif yCenter + DNN_INPUT_SIDE_LEN // 2 > shape[1]:
+	elif yCenter + DNN_INPUT_SIDE_LEN // 2 > shape[0]:
 		return False,None,None,None,None
 	elif xCenter - DNN_INPUT_SIDE_LEN // 2 + 1 <0:
 		return False,None,None,None,None
-	elif xCenter + DNN_INPUT_SIDE_LEN // 2 > shape[2]:
+	elif xCenter + DNN_INPUT_SIDE_LEN // 2 > shape[1]:
 		return False,None,None,None,None
 	else:
 		return True,yCenter - DNN_INPUT_SIDE_LEN // 2 + 1, \
