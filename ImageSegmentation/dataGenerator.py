@@ -68,30 +68,30 @@ def gen_roi_images(case_path,output_path):
 						image_array = cut_lung_from_background.lung_mask_HU(body,plot=False)
 						print("output shape", image_array.shape)
 						roi_image_array,image_erased,character_list = roi_region_cut(roi, image_array)
-						character_list.append(nodule_type.childNodes[0].data)
+						character_list.append(int(nodule_type.childNodes[0].data))
 						#Save roi image array
-						complete_image_dir = os.path.join(output_path,"lung_data\\complete")
+						complete_image_dir = os.path.join(output_path,"complete")
 						if not os.path.exists(complete_image_dir):
 							#os.mkdir(roi_image_dir)
 							os.makedirs(complete_image_dir)
-						erased_image_dir = os.path.join(output_path, "lung_data\\erased")
+						erased_image_dir = os.path.join(output_path, "erased")
 						if not os.path.exists(erased_image_dir):
 							# os.mkdir(roi_image_dir)
 							os.makedirs(erased_image_dir)
 
 						#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
 						noduleID = ''.join(noduleID.split())
-						save_name_complete = complete_image_dir+'\\'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+						save_name_complete = complete_image_dir+'/'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
 							nodule_type.childNodes[0].data)
-						save_name_erased = erased_image_dir+'\\'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+						save_name_erased = erased_image_dir+'/'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
 							nodule_type.childNodes[0].data)
-						np.save(save_name_complete+ "_whole.npy", image_array_origion)
+						# np.save(save_name_complete+ "_whole.npy", image_array_origion)
 						np.save(save_name_complete + "_cut.npy", image_array)
 						saved_CT= image_array
-						cv2.imwrite(save_name_complete+"_cut.jpg",saved_CT*255)
+						# cv2.imwrite(save_name_complete+"_cut.jpg",saved_CT*255)
 						np.save(save_name_erased + "_erased.npy", image_erased)
 						erasd_CT= image_erased
-						cv2.imwrite(save_name_erased+"_erased.jpg",erasd_CT*255)
+						# cv2.imwrite(save_name_erased+"_erased.jpg",erasd_CT*255)
 						return save_name_complete,save_name_erased,character_list
 
 		except:

@@ -26,14 +26,16 @@ def prepare_all_data(raw_data_root,intermedia_data_root):
 							print("CT Dir:",series_dir)
 							try:
 								save_name_complete,save_name_erased,character_list=dataGenerator.gen_roi_images(series_dir, intermedia_data_root)
+								# character_list=character_list.replace('[','')
+								# character_list = character_list.replace(']', '')
 								print(save_name_complete+'_cut.npy'+' '+str(character_list)+'\n')
-								print(save_name_erased+'.npy'+' '+str(character_list)+'\n')
+								print(save_name_erased+'_erased.npy'+' '+str(character_list)+'\n')
 								f_label.write(save_name_complete+'_cut.npy'+' '+str(character_list)+'\n')
-								f_erased.write(save_name_erased+'.npy'+' '+str(character_list)+'\n')
+								f_erased.write(save_name_erased+'_erased.npy'+' '+str(character_list)+'\n')
 							except:
 								break
-	# f_label.close()
-	# f_erased.close()
+	f_label.close()
+	f_erased.close()
 
 def is_CT_dir(case_path):
 	'''To clissify CT and DX(X-ray) directorys 
@@ -47,7 +49,7 @@ def is_CT_dir(case_path):
 	return False
 
 if __name__ == '__main__':
-	raw_data_root = r"D:\cancer\gan\lung\LIDC_dataset\LIDC-IDRI"
-	intermedia_data_root = r"D:\cancer\gan\lung"
+	raw_data_root = r"/workspace/data/LIDC-IDRI"
+	intermedia_data_root = r"/workspace/data/lung"
 
 	prepare_all_data(raw_data_root, intermedia_data_root)
