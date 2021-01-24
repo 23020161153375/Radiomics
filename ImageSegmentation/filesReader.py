@@ -72,25 +72,35 @@ def show_image(image_array_path):
 			image_array = np.load(fp)
 			img = sitk.GetImageFromArray(image_array,isVector = True)
 			
-			sitk.Show(img)
+			sitk.Show(img,"sample image")
 
 
-#test 
-'''
-case_path = r"F:\LIDC-IDRI\LIDC-IDRI-0001\1.3.6.1.4.1.14519.5.2.1.6279.6001.298806137288633453246975630178\1.3.6.1.4.1.14519.5.2.1.6279.6001.179049373636438705059720603192"
-image_array = find_images_array(case_path)
-'''
-'''
-We accasionally found that when a module is imported 
-it will be executed at first in runtime 
-'''
+if __name__ == '__main__':
+	#test
+	#
+	# IComs_path = "D:\cancer\gan\lung\LIDC_dataset\LIDC-IDRI\LIDC-IDRI-0001\01-01-2000-30178\3000566.000000-03192"
 
-'''
-image_array_path = r"F:\ROI_NODULE\1.3.6.1.4.1.14519.5.2.1.6279.6001.179049373636438705059720603192"
-show_image(image_array_path)
-'''
+	# case_path = r"D:\cancer\gan\lung\LIDC_dataset\LIDC-IDRI\LIDC-IDRI-0001\01-01-2000-30178\3000566.000000-03192"
+	# # image_array = find_images_data(case_path)
+	# print(image_array)
 
-'''
-slice_path = r"F:\LIDC-IDRI\LIDC-IDRI-0001\1.3.6.1.4.1.14519.5.2.1.6279.6001.298806137288633453246975630178\1.3.6.1.4.1.14519.5.2.1.6279.6001.179049373636438705059720603192\000001.dcm"
-find_image_data(slice_path)
-'''
+	'''
+	We accasionally found that when a module is imported 
+	it will be executed at first in runtime 
+	'''
+	#
+	# # #
+	image_array_path = r"D:/cancer/gan/lung/roi/1.3.6.1.4.1.14519.5.2.1.6279.6001.129007566048223160327836686225"
+	show_image(image_array_path)
+
+
+	# img = find_image_data("Nodule_001.npy")
+	# image_array = np.load("Nodule_001.npy")
+	# img = sitk.GetImageFromArray(image_array,isVector = True)
+	# print_image_info(img)
+	# print(img)
+
+	'''
+	slice_path = r"F:/LIDC-IDRI/LIDC-IDRI-0001/1.3.6.1.4.1.14519.5.2.1.6279.6001.298806137288633453246975630178\1.3.6.1.4.1.14519.5.2.1.6279.6001.179049373636438705059720603192\000001.dcm"
+	find_image_data(slice_path)
+	'''

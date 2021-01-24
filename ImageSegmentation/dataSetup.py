@@ -1,6 +1,6 @@
 import os
 
-import data_generator
+import dataGenerator
 
 def prepare_all_data(raw_data_root,intermedia_data_root):
 	'''Get intermedia data(unorganized)
@@ -12,6 +12,8 @@ def prepare_all_data(raw_data_root,intermedia_data_root):
 	#Collection Name -> Subject -> Study -> Series -> slices(DICOM files)
 	#The raw_data_root is the path to our collection name("LIDC-IDRI") directory.
 
+	f_label = open("Label.txt", 'a')
+	f_erased = open("Erased.txt", 'a')
 	for subject_dir_names in os.listdir(raw_data_root):
 		subject_dir = os.path.join(raw_data_root,subject_dir_names)
 		if os.path.isdir(subject_dir):
@@ -22,8 +24,18 @@ def prepare_all_data(raw_data_root,intermedia_data_root):
 						series_dir = os.path.join(study_dir,series_dir_name)
 						if os.path.isdir(series_dir) and is_CT_dir(series_dir):
 							print("CT Dir:",series_dir)
-							data_generator.gen_roi_images(series_dir, intermedia_data_root)
-
+							try:
+								save_name_complete,save_name_erased,character_list=dataGenerator.gen_roi_images(series_dir, intermedia_data_root)
+								# character_list=character_list.replace('[','')
+								# character_list = character_list.replace(']', '')
+								print(save_name_complete+'_cut.npy'+' '+str(character_list)+'\n')
+								print(save_name_erased+'_erased.npy'+' '+str(character_list)+'\n')
+								f_label.write(save_name_complete+'_cut.npy'+' '+str(character_list)+'\n')
+								f_erased.write(save_name_erased+'_erased.npy'+' '+str(character_list)+'\n')
+							except:
+								break
+	f_label.close()
+	f_erased.close()
 
 def is_CT_dir(case_path):
 	'''To clissify CT and DX(X-ray) directorys 
@@ -36,8 +48,8 @@ def is_CT_dir(case_path):
 			return True
 	return False
 
-'''
-raw_data_root = r"F:\LIDC-IDRI"
-intermedia_data_root = r"F:\RData\Nodules"
+if __name__ == '__main__':
+	raw_data_root = r"/workspace/data/LIDC-IDRI"
+	intermedia_data_root = r"/workspace/data/lung"
 
-prepare_all_data(raw_data_root, intermedia_data_root)
+	prepare_all_data(raw_data_root, intermedia_data_root)

@@ -4,9 +4,10 @@ import os
 import sys
 import numpy as np
 import random
-
-import files_reader
-
+import cv2
+import filesReader
+import body_mask
+import cut_lung_from_background
 
 def gen_roi_images(case_path,output_path):
 	'''Generate a series of roi images saved as npy files 
@@ -14,8 +15,8 @@ def gen_roi_images(case_path,output_path):
 	Bisides,it generates propertional number of plain images 
 	wherever a roi image is generated in a certain slice.
 	'''
-	fp = files_reader.find_xml_file(case_path)
-	images_data = files_reader.find_images_data(case_path)
+	fp = filesReader.find_xml_file(case_path)
+	images_data = filesReader.find_images_data(case_path)
 
 	DOMTree = parse(fp)
 
@@ -37,44 +38,64 @@ def gen_roi_images(case_path,output_path):
 		noduleID = nodule.getElementsByTagName("noduleID")[0].firstChild.data
 		print(noduleID)
 		rois = nodule.getElementsByTagName("roi")
-		#search_start = 0
-		for roi in rois:
+		try:
+			characteriscs = nodule.getElementsByTagName("characteristics")[0]
+			nodule_type= characteriscs.getElementsByTagName("malignancy")[0]
+			print("nodule_type=",nodule_type.childNodes[0].data)
+			#search_start = 0
+			if nodule_type is not None:
+				for roi in rois:
 
-			#If there is only a signle roi in rois, then the size of nodule on which we currently focus 
-			#is less than 3mm. Actually you can seperate these small nodules from the bigger with size > 3mm.
-			#(From latter experiments we conclude that it may be not a good idea to merge these two kinds of noudles into one category)
+					#If there is only a signle roi in rois, then the size of nodule on which we currently focus
+					#is less than 3mm. Actually you can seperate these small nodules from the bigger with size > 3mm.
+					#(From latter experiments we conclude that it may be not a good idea to merge these two kinds of noudles into one category)
 
-			imageSOP_UID = roi.getElementsByTagName("imageSOP_UID")[0].firstChild.data
-			inclusion = roi.getElementsByTagName("inclusion")[0]
-			if inclusion.firstChild.data == "TRUE":
-				#This is ultimate outer boundary of a noudle
-				sliceIndex = search_image_by_UID(images_data, imageSOP_UID)
-				print("SliceIndex:",sliceIndex)
+					imageSOP_UID = roi.getElementsByTagName("imageSOP_UID")[0].firstChild.data
+					inclusion = roi.getElementsByTagName("inclusion")[0]
+					if inclusion.firstChild.data == "TRUE":
+						#This is ultimate outer boundary of a noudle
+						sliceIndex = search_image_by_UID(images_data, imageSOP_UID)
+						print("SliceIndex:",sliceIndex)
 
-				#Next time the search will start from the adjacent slice (in a noudule )
-				#search_start = sliceIndex + 1
+						#Next time the search will start from the adjacent slice (in a noudule )
+						#search_start = sliceIndex + 1
 
-				image_array = images_data[sliceIndex][0]
-				roi_image_array = roi_region_cut(roi, image_array)
+						image_array = images_data[sliceIndex][0]
+						image_array_origion =image_array.copy()
+						# cut lung from background
+						print("input shape",image_array.shape)
+						body = body_mask.apply_body_mask_and_bound(image_array, apply_bound=False)
+						image_array = cut_lung_from_background.lung_mask_HU(body,plot=False)
+						print("output shape", image_array.shape)
+						roi_image_array,image_erased,character_list = roi_region_cut(roi, image_array)
+						character_list.append(int(nodule_type.childNodes[0].data))
+						#Save roi image array
+						complete_image_dir = os.path.join(output_path,"complete")
+						if not os.path.exists(complete_image_dir):
+							#os.mkdir(roi_image_dir)
+							os.makedirs(complete_image_dir)
+						erased_image_dir = os.path.join(output_path, "erased")
+						if not os.path.exists(erased_image_dir):
+							# os.mkdir(roi_image_dir)
+							os.makedirs(erased_image_dir)
 
-				#Save roi image array
-				roi_image_dir = os.path.join(output_path,"roi",SeriesInstanceUid)
-				if not os.path.exists(roi_image_dir):
-					#os.mkdir(roi_image_dir)
-					os.makedirs(roi_image_dir)
+						#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
+						noduleID = ''.join(noduleID.split())
+						save_name_complete = complete_image_dir+'/'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+							nodule_type.childNodes[0].data)
+						save_name_erased = erased_image_dir+'/'+SeriesInstanceUid+'_'+noduleID+ "_" + str(sliceIndex) + "_T" + str(
+							nodule_type.childNodes[0].data)
+						# np.save(save_name_complete+ "_whole.npy", image_array_origion)
+						np.save(save_name_complete + "_cut.npy", image_array)
+						saved_CT= image_array
+						# cv2.imwrite(save_name_complete+"_cut.jpg",saved_CT*255)
+						np.save(save_name_erased + "_erased.npy", image_erased)
+						erasd_CT= image_erased
+						# cv2.imwrite(save_name_erased+"_erased.jpg",erasd_CT*255)
+						return save_name_complete,save_name_erased,character_list
 
-				#File name: roi.#readerID#.#nouduleID#.#sliceIndex#.npy
-				np.save(os.path.join(roi_image_dir,"0."+noduleID+"."+str(sliceIndex)+".npy"),roi_image_array)
-
-				#Simultaneously find and save non-noudule images 
-				plain_image_dir = os.path.join(output_path,"plain",SeriesInstanceUid)
-				if not os.path.exists(plain_image_dir):
-					#os.mkdir(plain_image_dir)
-					os.makedirs(plain_image_dir)
-
-				plain_image_path = os.path.join(plain_image_dir,"0."+noduleID+"."+str(sliceIndex)+".npy")
-
-				gen_plain_images(image_array, plain_image_path,2)
+		except:
+			return
 
 def gen_plain_images(image_array,full_output_path,factor = 1):
 	'''Generate plain image.
@@ -127,7 +148,8 @@ def search_image_by_UID(images_data,imageSOP_UID,start = 0):
 		else:
 			raise Exception("ImageSOP_UID:\n"+ imageSOP_UID+"\n NOT found!")
 
-def roi_region_cut(roi,image_array):
+
+def roi_region_cut(roi, image_array):
 	'''Return cut roi-image stored as Numpy ndarray
 
 	If the diameter of nodule is bigger than DNN_INPUT_NUMBER,we merely cut off 
@@ -135,22 +157,50 @@ def roi_region_cut(roi,image_array):
 	'''
 
 	shape = image_array.shape
-	xMin,yMin,height,width = rect_region_locate(roi)
-	print("LOCATE ROI-IMAGE: X={}, Y={}, HEIGHT={},WIDTH={}".format(xMin,yMin,height,width))
-	
-	#Whatever the noudule 's size is > 3mm or not
+	xMin, yMin, height, width = rect_region_locate(roi)
+	print("LOCATE ROI-IMAGE: X={}, Y={}, HEIGHT={},WIDTH={}".format(xMin, yMin, height, width))
+	roi_list = [xMin, yMin, height, width]
+	# Whatever the noudule 's size is > 3mm or not
 	yCenter = (yMin * 2 + width) // 2
 	xCenter = (xMin * 2 + height) // 2
 
-	valid,y1,y2,x1,x2 = boundary_check(xCenter, yCenter, shape)
+	valid, y1, y2, x1, x2 = boundary_check(xCenter, yCenter, shape)
 
 	if valid:
-		print("GENERATE ROI-IMAGE: Y1={}, Y2={}, X1={},X2={}".format(y1,y2,x1,x2))
-		# "+1" for slicing			
-		return image_array[0,y1:y2 + 1,x1:x2 + 1]
+		print("GENERATE ROI-IMAGE: Y1={}, Y2={}, X1={},X2={}".format(y1, y2, x1, x2))
+		# "+1" for slicing
+		img_roi = image_array[y1:y2 + 1, x1:x2 + 1]
+		img_copy = image_array.copy()
+		img_copy[y1:y2 + 1, x1:x2 + 1]=-500
+		return img_roi,img_copy,roi_list
 	else:
 		return None
 
+def roi_region_erase(roi, image_array):
+	'''Return erase roi-image stored as Numpy ndarray
+
+	If the diameter of nodule is bigger than DNN_INPUT_NUMBER,we merely cut off
+	its cemteral region so far.
+	'''
+
+	shape = image_array.shape
+	xMin, yMin, height, width = rect_region_locate(roi)
+	print("LOCATE ROI-IMAGE: X={}, Y={}, HEIGHT={},WIDTH={}".format(xMin, yMin, height, width))
+
+	# Whatever the noudule 's size is > 3mm or not
+	yCenter = (yMin * 2 + width) // 2
+	xCenter = (xMin * 2 + height) // 2
+
+	valid, y1, y2, x1, x2 = boundary_check(xCenter, yCenter, shape)
+
+	if valid:
+		print("Erased ROI-IMAGE: Y1={}, Y2={}, X1={},X2={}".format(y1, y2, x1, x2))
+		# "+1" for slicing
+		image_after = image_array
+		image_after[0, y1:y2 + 1, x1:x2 + 1] = 0
+		return image_after
+	else:
+		return None
 
 DNN_INPUT_SIDE_LEN = 34
 def boundary_check(xCenter,yCenter,shape):
@@ -167,11 +217,11 @@ def boundary_check(xCenter,yCenter,shape):
 	if yCenter - DNN_INPUT_SIDE_LEN // 2 + 1 < 0:
 		#Use "//" rather than "/" for floor division
 		return False,None,None,None,None
-	elif yCenter + DNN_INPUT_SIDE_LEN // 2 > shape[1]:
+	elif yCenter + DNN_INPUT_SIDE_LEN // 2 > shape[0]:
 		return False,None,None,None,None
 	elif xCenter - DNN_INPUT_SIDE_LEN // 2 + 1 <0:
 		return False,None,None,None,None
-	elif xCenter + DNN_INPUT_SIDE_LEN // 2 > shape[2]:
+	elif xCenter + DNN_INPUT_SIDE_LEN // 2 > shape[1]:
 		return False,None,None,None,None
 	else:
 		return True,yCenter - DNN_INPUT_SIDE_LEN // 2 + 1, \
